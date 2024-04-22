@@ -1,0 +1,151 @@
+clc;
+close all;
+clear all;
+% fid=fclose('all');
+addpath('../Multi-view_Datasets-main/Digit');
+addpath('../Multi-view_Datasets-main/Image');
+addpath('../Multi-view_Datasets-main/Graph');
+addpath('../Multi-view_Datasets-main/Document');
+addpath('tool');
+% load('UCI.mat'); 
+% load('3Sources.mat');
+% load('BBCSport.mat');
+load('Yale.mat');
+% load('MSRC-v1-6v.mat');
+% load('BBC4view.mat');
+% load('COIL20.mat');
+% load('NH_p4660.mat');
+% load('Caltech101-7.mat');
+% load('ORL.mat');
+% load('WikipediaArticles.mat');
+% load('Hdigit.mat');
+% load('100leaves.mat');
+% load('handwritten.mat');
+% load('Scene.mat');
+% load('WebKB.mat');
+% load('proteinFold_Kmatrix.mat');
+
+if exist('Y','var')
+    gt = Y;  
+end
+if exist('y','var')
+    gt = y;  
+end
+if exist('truelabel','var')
+    gt = truelabel{1};
+end
+if exist('data','var')
+    X = data;  
+end
+
+nV = length(X); 
+class_num = length(unique(gt)); 
+
+W = cell(1,nV); 
+[data,vecX] = Con_Diagdata(X,nV);
+vecX = NormalizeData(vecX); 
+
+L = vecX'*vecX;
+sigma = mean(mean(1 - L));
+Wgt = ones(size(L)) - exp(-(ones(size(L))-L)/sigma);
+for v=1:nV  
+    X{v} = NormalizeData(X{v});
+    W{v} = Wgt;
+end
+
+
+% 100 10 1 1e-1 1e-2 1e-3 1e-4 1e-5 1e-6 1e-7 1e-8
+% 10 5 1 5e-1 1e-1 5e-2 1e-2 5e-3 1e-3 5e-4 1e-4 5e-5 1e-5 5e-6 1e-6
+for beta = [1e-2] % for E
+for lambda = [1] % for Pro
+mu = 1e-2; 
+epsilon = 1e-6;
+rho = 2;
+q = 1/2;
+% q = 2/3;
+rng(5,'twister');
+tic;
+[Coe,Conver_iter,iter] = NLRSC_MSC_Lq_matrix_Cor(X,W,mu,rho,epsilon,lambda,beta,q);
+% [Coe,Conver,iter] = NLRSC_MSC_Lq_matrix_No_E(X,W,mu,rho,epsilon,lambda,q);
+% [Coe,Conver,iter] = NLRSC_MSC_Lq_matrix_No_W(X,mu,rho,epsilon,beta,q);
+% affi = Coe + Coe';
+affi = (Coe + Coe')./nV;
+time = toc;
+
+Predicted = SpectralClustering(affi, class_num);
+result =  ClusteringMeasure(gt, Predicted);
+
+% save M_Rt_our23.mat Predicted affi;
+
+% L = affi(1:160,1:160);
+% save aff_our23.mat L;
+% imagesc(L);
+
+% save Conver_Yale23.mat Conver_iter iter;
+% save Conver_BBC23.mat Conver_iter iter;
+% save Conver_leaves23.mat Conver_iter iter;
+% save Conver_MSRC23.mat Conver_iter iter;
+% save Conver_PtFold23.mat Conver_iter iter;
+
+% res_Yale23(i,j) = result(1);
+% res_MSRC23(i,j) = result(1);
+% res_leaves23(i,j) = result(1);
+% res_BBC23(i,j) = result(1);
+% res_PtFold23(i,j) = result(1);
+
+%-w 为统一权重
+%-ed是更改后的2,q范式
+% fid=fopen('log_BBC4view-23-c.txt','a');
+% fid=fopen('log_BBC4view-12-tt.txt','a');
+% fid=fopen('log_NH-12.txt','a');
+% fid=fopen('log_UCI-12.txt','a');
+% fid=fopen('log_UCI-23.txt','a');
+% fid=fopen('log_Yale-12-tt.txt','a');
+% fid=fopen('log_Yale-23-No-E.txt','a');
+% fid=fopen('log_Yale-23-test.txt','a');
+% fid=fopen('log_BBCSports-23-w.txt','a');
+% fid=fopen('log_BBCSports-12.txt','a');
+% fid=fopen('log_3-sources-23.txt','a');
+% fid=fopen('log_3-sources-12.txt','a');
+% fid=fopen('log_BBC-Sport.txt','a');
+% fid=fopen('log_MSRC-v1-12-tt.txt','a');
+% fid=fopen('log_MSRC-v1-12-E21.txt','a');
+% fid=fopen('log_BBC4view-23-c.txt','a');
+% fid=fopen('log_COIL20.txt','a');
+% fid=fopen('log_Caltech101-12.txt','a');
+% fid=fopen('log_Caltech101-23.txt','a');
+% fid=fopen('log_ORL-12.txt','a');
+% fid=fopen('log_ORL-23.txt','a');
+% fid=fopen('log_NH-12.txt','a');
+% fid=fopen('log_Wiki-12.txt','a');
+% fid=fopen('log_Wiki-23.txt','a');
+% fid=fopen('log_Hdigit-12.txt','a');
+fid=fopen('log_leaves-12-tt.txt','a');
+% fid=fopen('log_leaves-23-No-E.txt','a');
+% fid=fopen('log_leaves-23-No-W.txt','a');
+% fid=fopen('log_hand-12.txt','a');
+% fid=fopen('log_scene-12.txt','a');
+%fid=fopen('log_WebKB-12.txt','a');
+% fid=fopen('log_proteinFold-23-c.txt','a');
+
+fprintf(fid,'beta: %.1e\n', beta);
+fprintf(fid,'lambda: %.1e\n', lambda);
+fprintf(fid,'mu: %.1e\n', mu);
+fprintf(fid,'eps: %.1e\n', epsilon);
+fprintf(fid,'rho: %.1f\n', rho);
+fprintf(fid,'q: %.1f\n', q);
+fprintf(fid,'result: %.4g %.4g %.4g %.4g %.4g %.4g %.4g \n', result);
+% fprintf(fid,'result: %.3g %.3g %.3g %.3g %.3g %.3g %.3g \n', result);
+fprintf(fid,'time: %.2f\n', time);
+fprintf(fid,'\n');
+
+end
+end
+fprintf(fid,'--------------------------------------------------\n');
+fid=fclose('all');
+
+% save res_Yale23.mat res_Yale23;
+% save res_MSRC23.mat res_MSRC23;
+% save res_leaves23.mat res_leaves23;
+% save res_BBC23.mat res_BBC23;
+% save res_PtFold23.mat res_PtFold23;
